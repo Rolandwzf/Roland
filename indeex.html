@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>八维满意度评估系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 0 15px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 30px;
+            color: #333;
+            margin: 0.5;
+        }
+        .dimension-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .dimension-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .dimension-item input[type="text"] {
+            width: 80px;
+            padding: 3px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .dimension-item label {
+            width: 120px;
+            font-size: 14px;
+            text-align: right;
+        }
+        input[type="range"] {
+            flex: 1;
+            max-width: 200px;
+        }
+        input[type="number"] {
+            width: 50px;
+            padding: 2px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        input[type="color"] {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .chart-container {
+            position: relative;
+            margin: 20px auto;
+            width: 650px;
+            height: 550px;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        button {
+            padding: 8px 25px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        #downloadBtn {
+            background: #4CAF50;
+        }
+        #resetBtn {
+            background: #f44336;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>八维满意度雷达图</h1>
+        <div class="developer">开发者：Rose Mary</div>
+    </div>
+    
+    <div class="dimension-grid">
+        <div class="dimension-item">
+            <input type="text" value="健康" data-index="0">
+            <input type="color" value="#FF6384" data-index="0">
+            <input type="range" min="1" max="10" value="1" data-index="0">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+        <div class="dimension-item">
+            <input type="text" value="事业" data-index="1">
+            <input type="color" value="#36A2EB" data-index="1">
+            <input type="range" min="1" max="10" value="1" data-index="1">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+        <div class="dimension-item">
+            <input type="text" value="成长" data-index="2">
+            <input type="color" value="#FFCE56" data-index="2">
+            <input type="range" min="1" max="10" value="1" data-index="2">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+        <div class="dimension-item">
+            <input type="text" value="爱情" data-index="3">
+            <input type="color" value="#4BC0C0" data-index="3">
+            <input type="range" min="1" max="10" value="1" data-index="3">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+        <div class="dimension-item">
+            <input type="text" value="财富" data-index="4">
+            <input type="color" value="#9966FF" data-index="4">
+            <input type="range" min="1" max="10" value="1" data-index="4">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+        <div class="dimension-item">
+            <input type="text" value="家庭/亲情" data-index="5">
+            <input type="color" value="#FF9F40" data-index="5">
+            <input type="range" min="1" max="10" value="1" data-index="5">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+        <div class="dimension-item">
+            <input type="text" value="休闲/娱乐" data-index="6">
+            <input type="color" value="#8AC24A" data-index="6">
+            <input type="range" min="1" max="10" value="1" data-index="6">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+        <div class="dimension-item">
+            <input type="text" value="友情" data-index="7">
+            <input type="color" value="#EA80FC" data-index="7">
+            <input type="range" min="1" max="10" value="1" data-index="7">
+            <input type="number" min="1" max="10" value="1">
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button id="resetBtn">重置数据</button>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="radarChart"></canvas>
+    </div>
+    
+    <div class="button-group">
+        <button id="downloadBtn">下载保存图片</button>
+    </div>
+
+    <script>
+        // 初始化数据（全部设为1）
+        const initialData = [1,1,1,1,1,1,1,1];
+        const initialColors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#8AC24A', '#EA80FC'];
+        const initialLabels = ['健康', '事业', '成长', '爱情', '财富', '家庭/亲情', '休闲/娱乐', '友情'];
+        
+        // 图表初始化
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['', '', '', '', '', '', '', ''], // 显示所有标签
+                datasets: [{
+                    label: '',
+                    data: [...initialData],
+                    backgroundColor: 'rgba(255, 255, 255, 0)',
+                    borderColor: 'rgba(0,0,0,0.1)',
+                    pointBackgroundColor: '#fff',
+                    borderWidth: 0,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        min: 0,
+                        max: 10,
+                        ticks: {
+                            stepSize: 1,
+                            color: '#666',
+                            z: 10,
+                            callback: function(value) {
+                                return value;
+                            }
+                        },
+                        angleLines: {
+                            color: 'rgba(0,0,0,0.2)',
+                            lineWidth: 1
+                        },
+                        grid: {
+                            circular: true,
+                            color: function(context) {
+                                if (context.index === 0) {
+                                    return 'rgba(0,0,0,0)';
+                                }
+                                return 'rgba(0,0,0,0.1)';
+                            },
+                            lineWidth: function(context) {
+                                if (context.index === 0) {
+                                    return 0;
+                                }
+                                return 1;
+                            }
+                        },
+                        pointLabels: {
+                            display: true, // 显示默认的维度标签
+                            font: {
+                                size: 12
+                            },
+                            color: '#999'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                animation: {
+                    onComplete: function() {
+                        drawSectorBackgrounds();
+                        drawCustomLabels();
+                    }
+                }
+            }
+        });
+
+        // 绘制扇形背景
+        function drawSectorBackgrounds() {
+            const chartArea = chart.chartArea;
+            const centerX = (chartArea.left + chartArea.right) / 2;
+            const centerY = (chartArea.top + chartArea.bottom) / 2;
+            const radius = Math.min(chartArea.right - chartArea.left, chartArea.bottom - chartArea.top) / 2 * 0.9; // 缩小半径
+            
+            const ctx = chart.ctx;
+            const angleStep = (2 * Math.PI) / 8;
+            
+            // 清除之前的绘制
+            ctx.save();
+            ctx.clearRect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
+            chart.draw();
+            
+            // 绘制扇形背景
+            for (let i = 0; i < 8; i++) {
+                const startAngle = i * angleStep - Math.PI / 2;
+                const endAngle = (i + 1) * angleStep - Math.PI / 2;
+                
+                // 获取当前维度的颜色
+                const colorInput = document.querySelector(`input[type="color"][data-index="${i}"]`);
+                const color = colorInput ? colorInput.value : initialColors[i];
+                
+                // 获取当前维度的值
+                const value = chart.data.datasets[0].data[i];
+                const scaledRadius = (value / 10) * radius;
+                
+                // 绘制扇形
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, scaledRadius, startAngle, endAngle);
+                ctx.closePath();
+                
+                // 填充扇形
+                ctx.fillStyle = color + '80'; // 添加透明度
+                ctx.fill();
+                
+                // 绘制扇形边框
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        // 绘制自定义标签（位于雷达图外围）
+        function drawCustomLabels() {
+            const chartArea = chart.chartArea;
+            const centerX = (chartArea.left + chartArea.right) / 2;
+            const centerY = (chartArea.top + chartArea.bottom) / 2;
+            // 调整半径计算，确保标签不会超出画布
+            const radius = Math.min(chartArea.right - chartArea.left, chartArea.bottom - chartArea.top) / 2 * 0.85; // 留出更多空间给标签
+            const labelRadius = radius * 1.2; // 标签位置
+            
+            const ctx = chart.ctx;
+            const angleStep = (2 * Math.PI) / 8;
+            const labelInputs = document.querySelectorAll('.dimension-item input[type="text"]');
+            const labels = Array.from(labelInputs).map(input => input.value);
+            
+            ctx.save();
+            ctx.font = '14px Microsoft YaHei';
+            ctx.fillStyle = '#333';
+            
+            for (let i = 0; i < 8; i++) {
+                const angle = i * angleStep - Math.PI / 2 + angleStep / 2; // 将标签放在每个轴的末端
+                const x = centerX + Math.cos(angle) * labelRadius;
+                const y = centerY + Math.sin(angle) * labelRadius;
+                
+                // 确保标签在画布内
+                const padding = 10;
+                let finalX = x;
+                let finalY = y;
+                let textAlign = 'center';
+                let textBaseline = 'middle';
+                
+                if (x < chartArea.left + padding) {
+                    finalX = chartArea.left + padding;
+                    textAlign = 'right';
+                } else if (x > chartArea.right - padding) {
+                    finalX = chartArea.right - padding;
+                    textAlign = 'left';
+                }
+                
+                if (y < chartArea.top + padding) {
+                    finalY = chartArea.top + padding;
+                    textBaseline = 'bottom';
+                } else if (y > chartArea.bottom - padding) {
+                    finalY = chartArea.bottom - padding;
+                    textBaseline = 'top';
+                }
+                
+                ctx.textAlign = textAlign;
+                ctx.textBaseline = textBaseline;
+                ctx.fillText(labels[i], finalX, finalY);
+            }
+            
+            ctx.restore();
+        }
+
+        // 双向数据绑定
+        document.querySelectorAll('input[type="range"], input[type="number"], input[type="color"], input[type="text"]').forEach(input => {
+            input.addEventListener('input', function() {
+                const index = this.closest('.dimension-item').querySelector('[data-index]').dataset.index;
+                
+                if (this.type === 'range' || this.type === 'number') {
+                    const value = Math.min(10, Math.max(0, this.value));
+                    
+                    // 同步输入控件
+                    const sibling = this.type === 'range' ? 
+                        this.nextElementSibling : 
+                        this.previousElementSibling;
+                    if (sibling && (sibling.type === 'range' || sibling.type === 'number')) {
+                        sibling.value = value;
+                    }
+                    
+                    // 更新图表
+                    chart.data.datasets[0].data[index] = value;
+                }
+                
+                // 重绘扇形背景和标签
+                drawSectorBackgrounds();
+                drawCustomLabels();
+            });
+        });
+
+        // 下载功能
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            html2canvas(document.querySelector('.chart-container'), {
+                scale: 2,
+                logging: true,
+                useCORS: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '八维满意度评估.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        });
+
+        // 重置功能
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            // 重置输入控件
+            document.querySelectorAll('.dimension-item').forEach((item, index) => {
+                const rangeInput = item.querySelector('input[type="range"]');
+                const numberInput = item.querySelector('input[type="number"]');
+                const colorInput = item.querySelector('input[type="color"]');
+                const textInput = item.querySelector('input[type="text"]');
+                const defaultValue = initialData[index];
+                
+                rangeInput.value = defaultValue;
+                numberInput.value = defaultValue;
+                if (colorInput) {
+                    colorInput.value = initialColors[index];
+                }
+                if (textInput) {
+                    textInput.value = initialLabels[index];
+                }
+            });
+
+            // 更新图表
+            chart.data.datasets[0].data = [...initialData];
+            drawSectorBackgrounds();
+            drawCustomLabels();
+        });
+
+        // 初始绘制
+        setTimeout(() => {
+            drawSectorBackgrounds();
+            drawCustomLabels();
+        }, 500);
+
+    </script>
+</body>
+</html>
